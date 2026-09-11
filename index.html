@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulačka cen modelace nehtů – Clair</title>
+<script>
+(function() {
+  var saved = localStorage.getItem('clair-theme');
+  var theme = saved || ((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #B76E79;
+    --accent-dark: #9C5765;
+    --accent-light: #F7E9EC;
+    --bg: #F7F3F2;
+    --card: #FFFFFF;
+    --text: #262022;
+    --text-muted: #8A7B7E;
+    --border: #EAE0E1;
+    --dark: #241B22;
+    --dark-card: #2E2430;
+    --shadow-1: rgba(0,0,0,.25);
+    --shadow-2: rgba(0,0,0,.08);
+    --input-bg: #fff;
+    --panel-bg: #FBF7F6;
+    --panel-border: #EDE2E3;
+    --placeholder: #C7B8BB;
+    color-scheme: light;
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #1C1519;
+    --card: #241B20;
+    --text: #F1E9EB;
+    --text-muted: #A9989C;
+    --border: #3A2C31;
+    --dark: #140F12;
+    --dark-card: #1E1519;
+    --accent-light: #3A2429;
+    --shadow-1: rgba(0,0,0,.5);
+    --shadow-2: rgba(0,0,0,.35);
+    --input-bg: #2E2328;
+    --panel-bg: #251B20;
+    --panel-border: #3A2C31;
+    --placeholder: #6B565B;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Barlow', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    transition: background .25s ease, color .25s ease;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--dark);
+    padding: 0 24px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px var(--shadow-1);
+  }
+
+  .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .header-brand {
+    color: #fff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .header-sep {
+    color: rgba(255,255,255,.2);
+    font-size: 18px;
+    font-weight: 300;
+    margin: 0 2px;
+  }
+
+  .app-title {
+    color: rgba(255,255,255,.5);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+  }
+
+  /* ── THEME SWITCH ── */
+  .theme-switch {
+    position: relative;
+    width: 52px;
+    height: 28px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 20px;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .theme-switch .theme-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #E8B4BC;
+    box-shadow: 0 1px 4px rgba(0,0,0,.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    line-height: 1;
+    transition: transform .3s ease, background .3s ease;
+  }
+
+  .theme-switch .theme-thumb::before { content: "☀️"; }
+
+  html[data-theme="dark"] .theme-switch .theme-thumb {
+    transform: translateX(24px);
+    background: #8A7B7E;
+  }
+
+  html[data-theme="dark"] .theme-switch .theme-thumb::before { content: "🌙"; }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, var(--dark) 0%, #3A2A32 100%);
+    padding: 44px 24px 52px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -20%;
+    width: 140%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 50%, rgba(183,110,121,.18) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .hero h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: clamp(26px, 5vw, 40px);
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+
+  .hero h1 span { color: var(--accent); }
+
+  .hero p {
+    color: rgba(255,255,255,.6);
+    font-size: 14px;
+    max-width: 460px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* ── MAIN ── */
+  .main-container {
+    max-width: 640px;
+    margin: -32px auto 48px;
+    padding: 0 16px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .calc-card {
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px var(--shadow-2);
+    overflow: hidden;
+    animation: fadeUp .5s ease-out;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .card-header svg { flex-shrink: 0; }
+
+  .card-header h2 {
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .card-header.first { border-top: none; }
+
+  /* ── TIME INPUT ── */
+  .inputs-grid {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 22px 28px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .input-group label {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .6px;
+  }
+
+  .input-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+
+  .input-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(183,110,121,.15);
+  }
+
+  .input-wrap input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 14px 16px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    outline: none;
+    min-width: 0;
+  }
+
+  .input-wrap input::placeholder { color: var(--placeholder); font-weight: 400; }
+
+  .input-unit {
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    white-space: nowrap;
+  }
+
+  .time-sep {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-muted);
+    padding: 0 2px;
+    user-select: none;
+  }
+
+  .reset-btn {
+    background: var(--panel-bg);
+    color: var(--text-muted);
+    border: 1px solid var(--panel-border);
+    padding: 9px 16px;
+    border-radius: 20px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+
+  .reset-btn:hover { background: var(--accent-light); color: var(--accent-dark); }
+
+  /* ── EXTRA ITEMS ── */
+  .items-list {
+    padding: 4px 28px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    user-select: none;
+  }
+
+  .item-row.selected {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+
+  .item-row-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .item-checkbox {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    background: var(--input-bg);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .2s;
+  }
+
+  .item-row.selected .item-checkbox {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .item-checkbox svg { opacity: 0; transition: opacity .15s; }
+  .item-row.selected .item-checkbox svg { opacity: 1; }
+
+  .item-name { font-weight: 600; font-size: 15px; }
+
+  .item-price {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--accent-dark);
+    white-space: nowrap;
+  }
+
+  .items-empty {
+    padding: 14px 16px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-style: italic;
+  }
+
+  /* ── RESULT ── */
+  .result-section {
+    background: linear-gradient(135deg, var(--dark) 0%, #3A2A32 100%);
+    padding: 32px 28px;
+    text-align: center;
+  }
+
+  .result-section h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,.5);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  .price-display {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 52px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    transition: all .3s ease;
+  }
+
+  .price-display .currency {
+    font-size: 26px;
+    color: rgba(255,255,255,.5);
+    margin-left: 4px;
+  }
+
+  /* ── DETAILS / ADMIN (skryté před zákazníkem) ── */
+  .details-info {
+    margin: 24px 28px 28px;
+    padding: 16px 20px;
+    background: var(--panel-bg);
+    border: 1px dashed var(--panel-border);
+    border-radius: 10px;
+  }
+
+  .details-info h3 {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--text-muted);
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .details-info h3 .details-chevron { margin-left: auto; transition: transform .25s; }
+  .details-info.open h3 .details-chevron { transform: rotate(180deg); }
+
+  .details-body-wrap {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height .35s ease, margin-top .35s ease;
+  }
+
+  .details-info.open .details-body-wrap {
+    max-height: 1400px;
+    margin-top: 16px;
+  }
+
+  .details-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  .details-row strong { color: var(--text); font-weight: 600; }
+
+  .details-row .input-wrap { max-width: 140px; }
+  .details-row .input-wrap input { padding: 8px 12px; font-size: 15px; }
+
+  .margin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .margin-header label {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .6px;
+  }
+
+  .margin-value { font-weight: 800; font-size: 17px; color: var(--accent); }
+
+  .slider-wrap { position: relative; padding: 6px 0 16px; }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(183,110,121,.4);
+    transition: transform .15s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+
+  .rate-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: -2px 0 12px;
+  }
+
+  .rate-note strong { color: var(--accent-dark); }
+
+  .admin-divider {
+    border-top: 1px solid var(--panel-border);
+    margin: 16px 0 14px;
+    padding-top: 14px;
+  }
+
+  .admin-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  .admin-item-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .admin-item-row input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--panel-border);
+    background: var(--input-bg);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    outline: none;
+  }
+
+  .admin-item-row input[type="number"] {
+    width: 78px;
+    border: 1px solid var(--panel-border);
+    background: var(--input-bg);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    outline: none;
+    text-align: right;
+  }
+
+  .admin-item-row input:focus { border-color: var(--accent); }
+
+  .admin-item-row .kc-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    width: 16px;
+    flex-shrink: 0;
+  }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  .remove-btn:hover { color: #C0392B; background: rgba(192,57,43,.1); }
+
+  .add-item-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .add-item-form input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    border: 1px dashed var(--panel-border);
+    background: var(--input-bg);
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+  }
+
+  .add-item-form input[type="number"] {
+    width: 78px;
+    border: 1px dashed var(--panel-border);
+    background: var(--input-bg);
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    text-align: right;
+  }
+
+  .add-item-form input:focus { border-color: var(--accent); border-style: solid; }
+
+  .add-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .2s;
+    flex-shrink: 0;
+  }
+
+  .add-btn:hover { background: var(--accent-dark); }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 32px 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 480px) {
+    header { padding: 0 16px; }
+    .header-brand { font-size: 20px; letter-spacing: 2px; }
+    .app-title { display: none; }
+    .inputs-grid { flex-direction: column; align-items: stretch; }
+    .reset-btn { width: 100%; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-area">
+    <span class="header-brand">Clair</span>
+    <span class="header-sep">|</span>
+    <span class="app-title">Modelace nehtů</span>
+  </div>
+  <button class="theme-switch" id="themeSwitch" onclick="toggleTheme()" aria-label="Přepnout světlý/tmavý režim" title="Přepnout světlý/tmavý režim">
+    <span class="theme-thumb"></span>
+  </button>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Kalkulačka <span>ceny modelace</span></h1>
+  <p>Spočítejte si cenu modelace nehtů pro klientku</p>
+</div>
+
+<!-- MAIN -->
+<div class="main-container">
+  <div class="calc-card">
+
+    <!-- Time -->
+    <div class="card-header first">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#B76E79" stroke-width="2"/><path d="M9 5v4l3 2" stroke="#B76E79" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <h2>Doba modelace</h2>
+    </div>
+    <div class="inputs-grid">
+      <div class="input-group">
+        <label>Čas</label>
+        <div class="input-wrap">
+          <input type="number" id="timeHours" placeholder="0" min="0" step="1" style="max-width:70px">
+          <span class="input-unit">hod</span>
+          <span class="time-sep">:</span>
+          <input type="number" id="timeMinutes" placeholder="0" min="0" max="59" step="1" style="max-width:70px">
+          <span class="input-unit">min</span>
+        </div>
+      </div>
+      <button class="reset-btn" onclick="resetClient()">↻ Nová klientka</button>
+    </div>
+
+    <!-- Extra items -->
+    <div class="card-header">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2l2 4.5 5 .7-3.6 3.5.85 5-4.25-2.3L4.75 15.7l.85-5L2 7.2l5-.7L9 2z" stroke="#B76E79" stroke-width="1.3" stroke-linejoin="round"/></svg>
+      <h2>Doplňkové služby</h2>
+    </div>
+    <div class="items-list" id="itemsList"></div>
+
+    <!-- RESULT -->
+    <div class="result-section">
+      <h3>Cena pro klientku</h3>
+      <div class="price-display" id="priceDisplay">0<span class="currency">Kč</span></div>
+    </div>
+
+    <!-- ADMIN (skryté před zákazníkem) -->
+    <div class="details-info" id="detailsInfo">
+      <h3 onclick="toggleDetails()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#9CA3AF" stroke-width="1.5"/><path d="M7 4v4M7 10v.5" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Nastavení (pro personál)
+        <svg class="details-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </h3>
+      <div class="details-body-wrap">
+
+        <div class="details-row">
+          Nákupní cena materiálu
+          <div class="input-wrap">
+            <input type="number" id="materialPrice" min="0" step="10" oninput="calculate()">
+            <span class="input-unit">Kč</span>
+          </div>
+        </div>
+
+        <div class="margin-header">
+          <label>Vaše marže</label>
+          <span class="margin-value" id="marginLabel">0 %</span>
+        </div>
+        <div class="slider-wrap">
+          <input type="range" id="margin" min="0" max="300" value="0" oninput="calculate()">
+        </div>
+
+        <div class="details-row">
+          Základní cena (materiál + marže) <strong id="baseCenaDisplay">0 Kč</strong>
+        </div>
+        <div class="details-row">
+          Doplňkové služby celkem <strong id="extrasTotalDisplay">0 Kč</strong>
+        </div>
+        <div class="rate-note" id="rateNote" hidden></div>
+
+        <div class="admin-divider">
+          <div class="admin-label">Správa doplňkových služeb</div>
+          <div id="adminItemsList"></div>
+          <div class="add-item-form">
+            <input type="text" id="newItemName" placeholder="Název (např. Zdobení)">
+            <input type="number" id="newItemPrice" placeholder="Cena" min="0" step="10">
+            <button class="add-btn" onclick="addItem()">+ Přidat</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  Kosmetický salon Clair · Ceny jsou orientační
+</footer>
+
+<script>
+  function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('clair-theme', next);
+  }
+
+  const DEFAULT_ITEMS = [
+    { id: 1, name: 'Zdobení', price: 50 },
+    { id: 2, name: 'Dostavba nehtů', price: 100 }
+  ];
+
+  let items = [];
+  let selections = {}; // id -> bool, per-klientku, neukládá se
+
+  function loadItems() {
+    try {
+      const raw = localStorage.getItem('clair-items');
+      items = raw ? JSON.parse(raw) : DEFAULT_ITEMS.slice();
+    } catch (e) {
+      items = DEFAULT_ITEMS.slice();
+    }
+  }
+
+  function saveItems() {
+    localStorage.setItem('clair-items', JSON.stringify(items));
+  }
+
+  function loadSettings() {
+    try {
+      const raw = localStorage.getItem('clair-settings');
+      const s = raw ? JSON.parse(raw) : {};
+      document.getElementById('materialPrice').value = (s.materialPrice != null) ? s.materialPrice : 100;
+      document.getElementById('margin').value = (s.margin != null) ? s.margin : 100;
+    } catch (e) {
+      document.getElementById('materialPrice').value = 100;
+      document.getElementById('margin').value = 100;
+    }
+  }
+
+  function saveSettings() {
+    const materialPrice = parseFloat(document.getElementById('materialPrice').value) || 0;
+    const margin = parseInt(document.getElementById('margin').value) || 0;
+    localStorage.setItem('clair-settings', JSON.stringify({ materialPrice, margin }));
+  }
+
+  function toggleItem(id) {
+    selections[id] = !selections[id];
+    renderMainItems();
+    calculate();
+  }
+
+  function renderMainItems() {
+    const el = document.getElementById('itemsList');
+    if (!items.length) {
+      el.innerHTML = '<div class="items-empty">Zatím žádné doplňkové služby. Přidejte je v nastavení níže.</div>';
+      return;
+    }
+    el.innerHTML = items.map(it => `
+      <div class="item-row ${selections[it.id] ? 'selected' : ''}" onclick="toggleItem(${it.id})">
+        <div class="item-row-left">
+          <span class="item-checkbox">
+            <svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5l4 4 7-8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <span class="item-name">${escapeHtml(it.name)}</span>
+        </div>
+        <span class="item-price">${Math.round(it.price)} Kč</span>
+      </div>
+    `).join('');
+  }
+
+  function renderAdminItems() {
+    const el = document.getElementById('adminItemsList');
+    el.innerHTML = items.map(it => `
+      <div class="admin-item-row">
+        <input type="text" value="${escapeHtml(it.name)}" oninput="updateItemField(${it.id}, 'name', this.value)">
+        <input type="number" value="${it.price}" min="0" step="10" oninput="updateItemField(${it.id}, 'price', this.value)">
+        <span class="kc-label">Kč</span>
+        <button class="remove-btn" onclick="removeItem(${it.id})" title="Odstranit">×</button>
+      </div>
+    `).join('');
+  }
+
+  function updateItemField(id, field, value) {
+    const it = items.find(i => i.id === id);
+    if (!it) return;
+    it[field] = field === 'price' ? (parseFloat(value) || 0) : value;
+    saveItems();
+    renderMainItems();
+    calculate();
+  }
+
+  function addItem() {
+    const nameEl = document.getElementById('newItemName');
+    const priceEl = document.getElementById('newItemPrice');
+    const name = nameEl.value.trim();
+    const price = parseFloat(priceEl.value) || 0;
+    if (!name) { nameEl.focus(); return; }
+    const id = Date.now();
+    items.push({ id, name, price });
+    saveItems();
+    nameEl.value = '';
+    priceEl.value = '';
+    renderMainItems();
+    renderAdminItems();
+    calculate();
+    nameEl.focus();
+  }
+
+  function removeItem(id) {
+    items = items.filter(i => i.id !== id);
+    delete selections[id];
+    saveItems();
+    renderMainItems();
+    renderAdminItems();
+    calculate();
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function resetClient() {
+    selections = {};
+    document.getElementById('timeHours').value = '';
+    document.getElementById('timeMinutes').value = '';
+    renderMainItems();
+    calculate();
+  }
+
+  function calculate() {
+    const materialPrice = parseFloat(document.getElementById('materialPrice').value) || 0;
+    const marginPct = parseInt(document.getElementById('margin').value) || 0;
+    const timeHours = parseFloat(document.getElementById('timeHours').value) || 0;
+    const timeMinutes = parseFloat(document.getElementById('timeMinutes').value) || 0;
+    const totalTime = timeHours + timeMinutes / 60;
+
+    const baseCena = materialPrice * (1 + marginPct / 100);
+    const extrasTotal = items.reduce((sum, it) => sum + (selections[it.id] ? it.price : 0), 0);
+    const finalCena = baseCena + extrasTotal;
+
+    document.getElementById('priceDisplay').innerHTML =
+      Math.round(finalCena) + '<span class="currency">Kč</span>';
+    document.getElementById('baseCenaDisplay').textContent = Math.round(baseCena) + ' Kč';
+    document.getElementById('extrasTotalDisplay').textContent = Math.round(extrasTotal) + ' Kč';
+    document.getElementById('marginLabel').textContent = marginPct + ' %';
+
+    const rateNote = document.getElementById('rateNote');
+    if (totalTime > 0) {
+      rateNote.hidden = false;
+      rateNote.innerHTML = 'Efektivní sazba: <strong>' + Math.round(finalCena / totalTime) + ' Kč/hod</strong>';
+    } else {
+      rateNote.hidden = true;
+    }
+
+    saveSettings();
+  }
+
+  function toggleDetails() {
+    document.getElementById('detailsInfo').classList.toggle('open');
+  }
+
+  // Init
+  loadItems();
+  loadSettings();
+  renderMainItems();
+  renderAdminItems();
+  calculate();
+</script>
+
+</body>
+</html>
